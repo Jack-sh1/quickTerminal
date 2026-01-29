@@ -60,26 +60,23 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [output]);
 
-  // ✅ 路径美化函数：显示 ~ 或目录名
+  // ✅ 路径美化函数：只显示最后一个目录名或 ~
   const getDisplayPath = (path: string) => {
     if (!path) return '';
     
     // 统一路径格式
     const normalizedPath = path.replace(/\\/g, '/');
     
-    // 获取 HOME 目录 (简单推断)
+    // 检查是否是主目录
     const homeMatch = normalizedPath.match(/^(\/Users\/[^\/]+|\/home\/[^\/]+|C:\/Users\/[^\/]+)/);
     const homeDir = homeMatch ? homeMatch[0] : '';
     
+    // 如果正好是主目录，显示 ~
     if (homeDir && normalizedPath === homeDir) {
       return '~';
     }
     
-    if (homeDir && normalizedPath.startsWith(homeDir + '/')) {
-      return '~' + normalizedPath.substring(homeDir.length);
-    }
-    
-    // 否则显示最后一段目录名
+    // 其他情况只显示最后一个目录名
     const parts = normalizedPath.split('/').filter(p => p);
     return parts[parts.length - 1] || '/';
   };
@@ -226,7 +223,6 @@ function App() {
                 {line.meta?.branch && (
                   <span className="text-purple-400">({line.meta.branch})</span>
                 )}
-                <span className="text-green-400 font-bold">➜</span>
                 <span className="text-gray-100">{line.text}</span>
               </div>
             )}
@@ -252,7 +248,6 @@ function App() {
           {gitBranch && (
             <span className="text-purple-400">({gitBranch})</span>
           )}
-          <span className="text-green-400 font-bold">➜</span>
           <input
             type="text"
             value={input}
