@@ -91,7 +91,7 @@ npm run tauri build
 
 ## 📜 许可证
 
-本项目采用 [MIT License](LICENSE) 开源。
+本项目采用 [MIT License](./LICENSE) 开源。
 
 ---
 **QuickTerm - 重新定义极简主义命令行工具。** ✨
