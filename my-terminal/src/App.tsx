@@ -95,8 +95,13 @@ function App() {
             setOutput((prev: TerminalLine[]) => [...prev, { type: 'error', text: 'cd: OLDPWD not set' }]);
             return;
           }
-        } else if (targetDir === '~') {
-          testCmd = 'cd ~ && pwd';
+        } else if (targetDir === '~' || targetDir === '') {
+          // ✅ 修复：使用不带参数的 cd，这是最可靠的进入主目录方式
+          testCmd = 'cd && pwd';
+        } else if (targetDir.startsWith('~')) {
+          // ✅ 修复：处理 ~/path 格式
+          const pathAfterTilde = targetDir.substring(1);
+          testCmd = `cd "$HOME${pathAfterTilde}" && pwd`;
         } else if (targetDir.startsWith('/') || /^[a-zA-Z]:\\/.test(targetDir)) {
           // 绝对路径 (支持 Unix 和 Windows)
           testCmd = `cd "${targetDir}" && pwd`;
