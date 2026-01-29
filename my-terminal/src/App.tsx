@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 interface TerminalLine {
@@ -20,20 +20,20 @@ function App() {
     if (!cmd.trim()) return;
     
     setIsLoading(true);
-    setOutput(prev => [...prev, { type: 'command', text: `$ ${cmd}` }]);
+    setOutput((prev: TerminalLine[]) => [...prev, { type: 'command', text: `$ ${cmd}` }]);
     
     try {
       const result = await invoke<string>('execute_command', { command: cmd });
-      setOutput(prev => [...prev, { type: 'output', text: result }]);
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: result }]);
     } catch (e) {
-      setOutput(prev => [...prev, { type: 'error', text: String(e) }]);
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'error', text: String(e) }]);
     } finally {
       setIsLoading(false);
       setInput('');
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       executeCommand(input);
     }
@@ -42,7 +42,7 @@ function App() {
   return (
     <div className="h-screen bg-gray-900 text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
       <div className="flex-1 overflow-auto space-y-1 mb-2">
-        {output.map((line, i) => (
+        {output.map((line: TerminalLine, i: number) => (
           <div key={i} className={`${line.type === 'error' ? 'text-red-400' : line.type === 'command' ? 'text-green-400 font-bold' : 'text-gray-300'} whitespace-pre-wrap break-all`}>
             {line.text}
           </div>
@@ -56,7 +56,7 @@ function App() {
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-600"
           autoFocus
