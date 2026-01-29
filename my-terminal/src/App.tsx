@@ -60,6 +60,10 @@ function App() {
           onKeyDown={handleKeyDown}
           className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-600"
           autoFocus
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
           placeholder="Enter command..."
         />
       </div>
