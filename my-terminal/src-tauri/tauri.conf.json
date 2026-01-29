@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "我的终端",
+  "productName": "my-terminal",
   "version": "0.1.0",
   "identifier": "com.wztao.my-terminal",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "我的终端",
+        "title": "my-terminal",
         "width": 1000,
         "height": 700,
         "minWidth": 800,
