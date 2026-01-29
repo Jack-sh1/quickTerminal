@@ -19,11 +19,42 @@ function App() {
   const executeCommand = async (cmd: string) => {
     if (!cmd.trim()) return;
     
+    let trimmedCmd = cmd.trim();
+
+    // 别名映射 (Solution 1 from alias.md)
+    const aliases: { [key: string]: string } = {
+      'll': 'ls -la',
+      'la': 'ls -la',
+      'l': 'ls -lh',
+      'ls': 'ls --color=auto',
+      '..': 'cd ..',
+      '...': 'cd ../..',
+      '~': 'cd ~',
+      'md': 'mkdir',
+      'rd': 'rmdir',
+      'cls': 'clear',
+      'c': 'clear',
+      'gs': 'git status',
+      'ga': 'git add',
+      'gc': 'git commit',
+      'gp': 'git push',
+      'gl': 'git log',
+    };
+
+    // 展开别名
+    const cmdParts = trimmedCmd.split(' ');
+    const baseCmd = cmdParts[0];
+    
+    if (aliases[baseCmd]) {
+      cmdParts[0] = aliases[baseCmd];
+      trimmedCmd = cmdParts.join(' ');
+    }
+    
     setIsLoading(true);
     setOutput((prev: TerminalLine[]) => [...prev, { type: 'command', text: `$ ${cmd}` }]);
     
     try {
-      const result = await invoke<string>('execute_command', { command: cmd });
+      const result = await invoke<string>('execute_command', { command: trimmedCmd });
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: result }]);
     } catch (e) {
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'error', text: String(e) }]);
