@@ -86,6 +86,8 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
+### 效果图
+<img width="1112" height="812" alt="截屏2026-01-30 13 30 47" src="https://github.com/user-attachments/assets/18e7481a-9862-4b62-b127-6f1567d2c5e6" />
 
 ---
 
