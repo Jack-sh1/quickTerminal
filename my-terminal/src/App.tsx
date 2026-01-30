@@ -60,9 +60,61 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [output]);
 
-  // ✅ 路径美化函数：只显示最后一个目录名或 ~
+  // ✅ 获取目录图标的函数
+  const getDirectoryIcon = (path: string): string => {
+    if (!path) return '🏠';
+    
+    const normalizedPath = path.replace(/\\/g, '/');
+    const parts = normalizedPath.split('/').filter(Boolean);
+    const dirName = parts.pop()?.toLowerCase() || '';
+    
+    // 目录图标映射
+    const iconMap: { [key: string]: string } = {
+      // 主要系统目录
+      'desktop': '🖥️',
+      'documents': '📄',
+      'downloads': '⬇️',
+      'pictures': '🖼️',
+      'photos': '📷',
+      'music': '🎵',
+      'movies': '🎬',
+      'videos': '🎥',
+      'applications': '📦',
+      'library': '📚',
+      'public': '🌐',
+      
+      // 开发相关
+      'projects': '💼',
+      'project': '💼',
+      'code': '💻',
+      'src': '📂',
+      'source': '📂',
+      'node_modules': '📦',
+      'dist': '📤',
+      'build': '🔨',
+      '.git': '🌿',
+      'config': '⚙️',
+      'bin': '🔧',
+      
+      // 其他
+      'trash': '🗑️',
+      'archive': '📦',
+      'temp': '⏳',
+      'backup': '💾',
+    };
+    
+    // 检查是否是主目录
+    const homeMatch = normalizedPath.match(/^(\/Users\/[^\/]+|\/home\/[^\/]+|C:\/Users\/[^\/]+)/);
+    if (homeMatch && normalizedPath === homeMatch[0]) {
+      return '🏠';
+    }
+    
+    return iconMap[dirName] || '📁';
+  };
+
+  // ✅ 路径美化函数：显示图标 + 最后一个目录名或 ~
   const getDisplayPath = (path: string) => {
-    if (!path) return '';
+    if (!path) return '🏠 ~';
     
     // 统一路径格式
     const normalizedPath = path.replace(/\\/g, '/');
@@ -71,14 +123,18 @@ function App() {
     const homeMatch = normalizedPath.match(/^(\/Users\/[^\/]+|\/home\/[^\/]+|C:\/Users\/[^\/]+)/);
     const homeDir = homeMatch ? homeMatch[0] : '';
     
-    // 如果正好是主目录，显示 ~
+    const icon = getDirectoryIcon(normalizedPath);
+    
+    // 如果正好是主目录，显示图标 + ~
     if (homeDir && normalizedPath === homeDir) {
-      return '~';
+      return `${icon} ~`;
     }
     
-    // 其他情况只显示最后一个目录名
+    // 其他情况显示图标 + 最后一个目录名
     const parts = normalizedPath.split('/').filter(p => p);
-    return parts[parts.length - 1] || '/';
+    const dirName = parts[parts.length - 1] || '/';
+    
+    return `${icon} ${dirName}`;
   };
 
   const executeCommand = async (cmd: string) => {
@@ -178,6 +234,41 @@ function App() {
       setInput('');
       return;
     }
+
+    // ✅ 智能路径检测 (方案 3)
+    // 只检测简单的目录名（字母、数字、-、_、.）
+    const isDirPattern = /^[a-zA-Z0-9_.-]+$/.test(trimmedCmd);
+    
+    if (isDirPattern) {
+      try {
+        // 尝试作为目录跳转
+        const testCmd = currentDir 
+          ? `cd "${currentDir}" && cd "${trimmedCmd}" && pwd`
+          : `cd "${trimmedCmd}" && pwd`;
+        
+        const result = await invoke<string>('execute_command', { 
+          command: testCmd 
+        });
+        
+        // 成功！是一个目录
+        const newDir = stripAnsi(result.trim());
+        setPreviousDir(currentDir);
+        setCurrentDir(newDir);
+        await updateGitBranch(newDir);
+        
+        // 记录输入的跳转命令并添加空行
+        setOutput((prev: TerminalLine[]) => [...prev, { 
+          type: 'command', 
+          text: cmd,
+          meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
+        } as any, { type: 'output', text: '' }]);
+        
+        setInput('');
+        return;
+      } catch (e) {
+        // 不是目录或跳转失败，继续作为普通命令执行
+      }
+    }
     
     setIsLoading(true);
     setOutput((prev: TerminalLine[]) => [...prev, { 
@@ -213,13 +304,13 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-gray-900 text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
+    <div className="h-screen bg-[#1e2a3a] text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
       <div className="flex-1 overflow-auto mb-2 pr-2">
         {output.map((line: TerminalLine, i: number) => (
           <div key={i} className="mb-1">
             {line.type === 'command' && (
               <div className="flex items-center gap-2">
-                <span className="text-cyan-400 font-bold">{line.meta?.dir}</span>
+                <span className="text-green-400 font-bold">{line.meta?.dir}</span>
                 {line.meta?.branch && (
                   <span className="text-purple-400">({line.meta.branch})</span>
                 )}
@@ -242,9 +333,9 @@ function App() {
         <div ref={bottomRef} />
       </div>
       
-      <div className="flex flex-col border-t border-gray-700 pt-3">
+      <div className="flex flex-col border-t border-gray-600 pt-3">
         <div className="flex items-center gap-2">
-          <span className="text-cyan-400 font-bold">{getDisplayPath(currentDir)}</span>
+          <span className="text-green-400 font-bold">{getDisplayPath(currentDir)}</span>
           {gitBranch && (
             <span className="text-purple-400">({gitBranch})</span>
           )}
@@ -253,13 +344,13 @@ function App() {
             value={input}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-700"
+            className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-500"
             autoFocus
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck="false"
-            placeholder=""
+            placeholder="Type a command..."
           />
         </div>
       </div>
