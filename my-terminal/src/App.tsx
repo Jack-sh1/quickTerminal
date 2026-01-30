@@ -24,7 +24,32 @@ function App() {
   const [currentDir, setCurrentDir] = useState<string>(''); // 当前目录状态
   const [previousDir, setPreviousDir] = useState<string>(''); // 上一个目录状态 (用于 cd -)
   const [gitBranch, setGitBranch] = useState<string>(''); // Git 分支状态
+  
+  // ✅ 新增：命令历史状态
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [tempInput, setTempInput] = useState(''); // 暂存当前输入
+
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // ✅ 加载命令历史
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('commandHistory');
+    if (savedHistory) {
+      try {
+        setCommandHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Failed to load command history:', e);
+      }
+    }
+  }, []);
+
+  // ✅ 保存命令历史
+  useEffect(() => {
+    if (commandHistory.length > 0) {
+      localStorage.setItem('commandHistory', JSON.stringify(commandHistory));
+    }
+  }, [commandHistory]);
 
   // 获取 Git 分支
   const updateGitBranch = async (dir: string) => {
@@ -43,7 +68,7 @@ function App() {
     const initDir = async () => {
       try {
         const dir = await invoke<string>('execute_command', { 
-          command: 'pwd' 
+          command: 'cd ~ && pwd' 
         });
         const cleanDir = stripAnsi(dir.trim());
         setCurrentDir(cleanDir);
@@ -137,10 +162,31 @@ function App() {
     return `${icon} ${dirName}`;
   };
 
+  // ✅ 添加命令到历史
+  const addToHistory = (cmd: string) => {
+    if (!cmd.trim()) return;
+    
+    setCommandHistory(prev => {
+      // 移除重复的命令
+      const filtered = prev.filter(c => c !== cmd);
+      // 添加到末尾（最新的）
+      const newHistory = [...filtered, cmd];
+      // 只保留最近 100 条
+      return newHistory.slice(-100);
+    });
+    
+    // 重置历史索引
+    setHistoryIndex(-1);
+    setTempInput('');
+  };
+
   const executeCommand = async (cmd: string) => {
     if (!cmd.trim()) return;
     
     let trimmedCmd = cmd.trim();
+
+    // ✅ 添加到历史（在执行前）
+    addToHistory(trimmedCmd);
 
     // 别名映射
     const aliases: { [key: string]: string } = {
@@ -235,6 +281,24 @@ function App() {
       return;
     }
 
+    // ✅ history 命令 - 显示历史
+    if (trimmedCmd === 'history') {
+      setOutput((prev: TerminalLine[]) => [...prev, { 
+        type: 'command', 
+        text: cmd,
+        meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
+      } as any]);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, {
+        type: 'output',
+        text: commandHistory.map((c, i) => `${String(i + 1).padStart(3, ' ')}  ${c}`).join('\n')
+      }]);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      setInput('');
+      return;
+    }
+
     // ✅ 智能路径检测 (方案 3)
     // 只检测简单的目录名（字母、数字、-、_、.）
     const isDirPattern = /^[a-zA-Z0-9_.-]+$/.test(trimmedCmd);
@@ -295,12 +359,65 @@ function App() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter - 执行命令
     if (e.key === 'Enter') {
       executeCommand(input);
-    } else if (e.ctrlKey && e.key === 'l') {
+      return;
+    }
+    
+    // Ctrl+L - 清屏
+    if (e.ctrlKey && e.key === 'l') {
       e.preventDefault();
       setOutput([]);
+      return;
     }
+
+    // ✅ 上箭头 - 上一条历史
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      
+      if (commandHistory.length === 0) return;
+      
+      // 第一次按上箭头，保存当前输入
+      if (historyIndex === -1) {
+        setTempInput(input);
+      }
+      
+      // 计算新索引
+      const newIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+      setHistoryIndex(newIndex);
+      
+      // 从历史末尾往前数
+      const historyCmd = commandHistory[commandHistory.length - 1 - newIndex];
+      setInput(historyCmd);
+      return;
+    }
+
+    // ✅ 下箭头 - 下一条历史
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      
+      if (historyIndex === -1) return;
+      
+      const newIndex = historyIndex - 1;
+      
+      if (newIndex === -1) {
+        // 回到当前输入
+        setHistoryIndex(-1);
+        setInput(tempInput);
+      } else {
+        // 显示历史命令
+        setHistoryIndex(newIndex);
+        const historyCmd = commandHistory[commandHistory.length - 1 - newIndex];
+        setInput(historyCmd);
+      }
+      return;
+    }
+
+    // ✅ 任何其他按键（除了上下箭头）如果是在浏览历史中，则视为修改命令
+    // 这里不需要显式重置 historyIndex，因为 onChange 会触发 setInput，
+    // 而用户通常是在浏览到某个历史命令后直接修改它。
+    // 但如果用户按了其他功能键，我们可以重置。
   };
 
   return (
@@ -342,7 +459,12 @@ function App() {
           <input
             type="text"
             value={input}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setInput(e.target.value);
+              if (historyIndex !== -1) {
+                setHistoryIndex(-1);
+              }
+            }}
             onKeyDown={handleKeyDown}
             className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-500"
             autoFocus
