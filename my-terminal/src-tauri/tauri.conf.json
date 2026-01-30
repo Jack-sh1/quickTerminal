@@ -14,10 +14,11 @@
       {
         "title": "my-terminal",
         "width": 1000,
-        "height": 700,
+        "height": 400,
         "minWidth": 800,
-        "minHeight": 500,
-        "backgroundColor": "#1e2a3a"
+        "minHeight": 200,
+        "transparent": true,
+        "backgroundColor": "transparent"
       }
     ],
     "security": {

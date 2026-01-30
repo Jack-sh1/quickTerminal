@@ -304,7 +304,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-[#1e2a3a] text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
+    <div className="h-screen bg-[#1e2a3a]/85 backdrop-blur-xl text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
       <div className="flex-1 overflow-auto mb-2 pr-2">
         {output.map((line: TerminalLine, i: number) => (
           <div key={i} className="mb-1">
@@ -333,7 +333,7 @@ function App() {
         <div ref={bottomRef} />
       </div>
       
-      <div className="flex flex-col border-t border-gray-600 pt-3">
+      <div className="flex flex-col border-t border-gray-600/40 pt-3 bg-gray-800/20">
         <div className="flex items-center gap-2">
           <span className="text-green-400 font-bold">{getDisplayPath(currentDir)}</span>
           {gitBranch && (
