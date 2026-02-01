@@ -1,5 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { PerformanceMonitor } from './PerformanceMonitor';
+
+interface CommandLog {
+  timestamp: number;
+  command: string;
+  directory: string;
+  duration: number; // 毫秒
+  success: boolean;
+  outputLines: number;
+}
+
+interface PerformanceMetrics {
+  totalCommands: number;
+  totalTime: number;
+  averageTime: number;
+  slowestCommand: string;
+  fastestCommand: string;
+  commandFrequency: { [key: string]: number };
+}
 
 interface TerminalLine {
   type: 'output' | 'error' | 'command';
@@ -30,9 +49,14 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [tempInput, setTempInput] = useState(''); // 暂存当前输入
 
+  // ✅ 新增：日志状态
+  const [commandLogs, setCommandLogs] = useState<CommandLog[]>([]);
+  const [commandStartTime, setCommandStartTime] = useState<number>(0);
+  const [showPerfMonitor, setShowPerfMonitor] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // ✅ 加载命令历史
+  // ✅ 加载命令历史和日志
   useEffect(() => {
     const savedHistory = localStorage.getItem('commandHistory');
     if (savedHistory) {
@@ -40,6 +64,15 @@ function App() {
         setCommandHistory(JSON.parse(savedHistory));
       } catch (e) {
         console.error('Failed to load command history:', e);
+      }
+    }
+
+    const savedLogs = localStorage.getItem('commandLogs');
+    if (savedLogs) {
+      try {
+        setCommandLogs(JSON.parse(savedLogs));
+      } catch (e) {
+        console.error('Failed to load logs:', e);
       }
     }
   }, []);
@@ -50,6 +83,111 @@ function App() {
       localStorage.setItem('commandHistory', JSON.stringify(commandHistory));
     }
   }, [commandHistory]);
+
+  // ✅ 保存日志
+  useEffect(() => {
+    if (commandLogs.length > 0) {
+      // 只保留最近 1000 条
+      const recentLogs = commandLogs.slice(-1000);
+      localStorage.setItem('commandLogs', JSON.stringify(recentLogs));
+    }
+  }, [commandLogs]);
+
+  // ✅ 记录命令日志
+  const logCommand = (
+    command: string,
+    success: boolean,
+    outputLines: number
+  ) => {
+    const duration = Date.now() - commandStartTime;
+    
+    const log: CommandLog = {
+      timestamp: Date.now(),
+      command,
+      directory: currentDir,
+      duration,
+      success,
+      outputLines,
+    };
+
+    setCommandLogs(prev => [...prev, log]);
+  };
+
+  // ✅ 计算统计数据
+  const calculateStats = (logs: CommandLog[]): PerformanceMetrics => {
+    if (logs.length === 0) {
+      return {
+        totalCommands: 0,
+        totalTime: 0,
+        averageTime: 0,
+        slowestCommand: 'N/A',
+        fastestCommand: 'N/A',
+        commandFrequency: {},
+      };
+    }
+
+    const totalCommands = logs.length;
+    const totalTime = logs.reduce((sum, log) => sum + log.duration, 0);
+    const averageTime = totalTime / totalCommands;
+
+    const sortedByDuration = [...logs].sort((a, b) => b.duration - a.duration);
+    const slowest = sortedByDuration[0];
+    const fastest = sortedByDuration[sortedByDuration.length - 1];
+    
+    const slowestCommand = `${slowest.command} (${slowest.duration}ms)`;
+    const fastestCommand = `${fastest.command} (${fastest.duration}ms)`;
+
+    const commandFrequency: { [key: string]: number } = {};
+    logs.forEach(log => {
+      const baseCmd = log.command.split(' ')[0];
+      commandFrequency[baseCmd] = (commandFrequency[baseCmd] || 0) + 1;
+    });
+
+    return {
+      totalCommands,
+      totalTime,
+      averageTime,
+      slowestCommand,
+      fastestCommand,
+      commandFrequency,
+    };
+  };
+
+  // ✅ 格式化统计输出
+  const formatStats = (stats: PerformanceMetrics): string => {
+    const topCommands = Object.entries(stats.commandFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([cmd, count]) => `  ${cmd}: ${count} times`)
+      .join('\n');
+
+    return `
+Performance Statistics
+━━━━━━━━━━━━━━━━━━━━━━
+
+Total Commands: ${stats.totalCommands}
+Total Time: ${(stats.totalTime / 1000).toFixed(2)}s
+Average Time: ${stats.averageTime.toFixed(2)}ms
+
+Slowest Command: ${stats.slowestCommand}
+Fastest Command: ${stats.fastestCommand}
+
+Top Commands:
+${topCommands}
+    `.trim();
+  };
+
+  // ✅ 格式化日志输出
+  const formatLogs = (logs: CommandLog[]): string => {
+    return logs.map(log => {
+      const date = new Date(log.timestamp);
+      const timeStr = date.toLocaleTimeString();
+      const status = log.success ? '✓' : '✗';
+      const duration = `${log.duration}ms`;
+      
+      return `${status} [${timeStr}] ${log.command} (${duration})`;
+    }).join('\n');
+  };
 
   // 获取 Git 分支
   const updateGitBranch = async (dir: string) => {
@@ -185,6 +323,9 @@ function App() {
     
     let trimmedCmd = cmd.trim();
 
+    // ✅ 记录开始时间
+    setCommandStartTime(Date.now());
+
     // ✅ 添加到历史（在执行前）
     addToHistory(trimmedCmd);
 
@@ -221,6 +362,7 @@ function App() {
 
     // 处理 cd 命令
     if (trimmedCmd.startsWith('cd ') || trimmedCmd === 'cd') {
+      const outputBeforeCount = output.length;
       // 记录输入的命令
       setOutput((prev: TerminalLine[]) => [...prev, { 
         type: 'command', 
@@ -240,6 +382,7 @@ function App() {
             testCmd = `cd "${targetDir}" && pwd`;
           } else {
             setOutput((prev: TerminalLine[]) => [...prev, { type: 'error', text: 'cd: OLDPWD not set' }]);
+            logCommand(trimmedCmd, false, 1);
             return;
           }
         } else if (targetDir === '~' || targetDir === '') {
@@ -264,12 +407,18 @@ function App() {
         
         // cd 成功后通常不显示输出，但添加一个空行
         setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+        
+        // ✅ 记录性能
+        logCommand(trimmedCmd, true, 1);
       } catch (error) {
         setOutput((prev: TerminalLine[]) => [...prev, { 
           type: 'error', 
           text: `cd: ${targetDir}: No such file or directory` 
         }]);
         setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+        
+        // ✅ 记录性能 (失败)
+        logCommand(trimmedCmd, false, 1);
       }
       return;
     }
@@ -278,6 +427,87 @@ function App() {
     if (trimmedCmd === 'clear') {
       setOutput([]);
       setInput('');
+      logCommand(trimmedCmd, true, 0);
+      return;
+    }
+
+    // ✅ stats 命令 - 显示统计
+    if (trimmedCmd === 'stats' || trimmedCmd === 'performance') {
+      setOutput((prev: TerminalLine[]) => [...prev, { 
+        type: 'command', 
+        text: cmd,
+        meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
+      } as any]);
+      
+      const stats = calculateStats(commandLogs);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, {
+        type: 'output',
+        text: formatStats(stats)
+      }]);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      setInput('');
+      logCommand(trimmedCmd, true, 1);
+      return;
+    }
+
+    // ✅ logs 命令 - 显示最近日志
+    if (trimmedCmd.startsWith('logs')) {
+      const parts = trimmedCmd.split(' ');
+      const count = parts[1] ? parseInt(parts[1]) : 20;
+      
+      setOutput((prev: TerminalLine[]) => [...prev, { 
+        type: 'command', 
+        text: cmd,
+        meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
+      } as any]);
+      
+      const recentLogs = commandLogs.slice(-count);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, {
+        type: 'output',
+        text: formatLogs(recentLogs)
+      }]);
+      
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      setInput('');
+      logCommand(trimmedCmd, true, 1);
+      return;
+    }
+
+    // ✅ export 命令 - 导出日志
+    if (trimmedCmd === 'export logs' || trimmedCmd === 'export-logs') {
+      setOutput((prev: TerminalLine[]) => [...prev, { 
+        type: 'command', 
+        text: cmd,
+        meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
+      } as any]);
+      
+      try {
+        const logData = JSON.stringify(commandLogs, null, 2);
+        const blob = new Blob([logData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `terminal-logs-${Date.now()}.json`;
+        a.click();
+        
+        setOutput((prev: TerminalLine[]) => [...prev, {
+          type: 'output',
+          text: `Exported ${commandLogs.length} logs`
+        }]);
+      } catch (e) {
+        setOutput((prev: TerminalLine[]) => [...prev, {
+          type: 'error',
+          text: 'Failed to export logs'
+        }]);
+      }
+      
+      setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      setInput('');
+      logCommand(trimmedCmd, true, 1);
       return;
     }
 
@@ -296,6 +526,7 @@ function App() {
       
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
       setInput('');
+      logCommand(trimmedCmd, true, 1);
       return;
     }
 
@@ -328,6 +559,7 @@ function App() {
         } as any, { type: 'output', text: '' }]);
         
         setInput('');
+        logCommand(trimmedCmd, true, 1);
         return;
       } catch (e) {
         // 不是目录或跳转失败，继续作为普通命令执行
@@ -341,6 +573,7 @@ function App() {
       meta: { dir: getDisplayPath(currentDir), branch: gitBranch }
     } as any]);
     
+    const outputBeforeCount = output.length;
     try {
       const fullCmd = currentDir ? `cd "${currentDir}" && ${trimmedCmd}` : trimmedCmd;
       const result = await invoke<string>('execute_command', { command: fullCmd });
@@ -349,9 +582,13 @@ function App() {
       }
       // 每个命令后添加空行
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      
+      const outputAfterCount = output.length;
+      logCommand(trimmedCmd, true, outputAfterCount - outputBeforeCount);
     } catch (e) {
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'error', text: String(e) }]);
       setOutput((prev: TerminalLine[]) => [...prev, { type: 'output', text: '' }]);
+      logCommand(trimmedCmd, false, 0);
     } finally {
       setIsLoading(false);
       setInput('');
@@ -369,6 +606,13 @@ function App() {
     if (e.ctrlKey && e.key === 'l') {
       e.preventDefault();
       setOutput([]);
+      return;
+    }
+
+    // Ctrl+P - 切换性能监控
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault();
+      setShowPerfMonitor(prev => !prev);
       return;
     }
 
@@ -421,7 +665,10 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-[#1e2a3a] text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
+    <div className="h-screen bg-[#1e2a3a] text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col relative">
+      {/* 性能监控面板 */}
+      <PerformanceMonitor logs={commandLogs} show={showPerfMonitor} />
+
       <div className="flex-1 overflow-auto mb-2 pr-2 select-text">
         {output.map((line: TerminalLine, i: number) => (
           <div key={i} className="mb-1">
