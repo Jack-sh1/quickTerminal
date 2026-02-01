@@ -1,101 +1,101 @@
-# 🚀 QuickTerm - 极简 Tauri 跨平台终端 (已开源)
+# 🚀 QuickTerm - Minimalist Tauri Cross-Platform Terminal (Open Source)
 
-QuickTerm 是一款基于 **Tauri v2** + **React** + **TypeScript** 构建的轻量级终端模拟器。它专为追求极致简洁和响应速度的开发者设计，去除了传统终端的冗余，保留了最核心的命令行体验，并注入了现代化的 UI 设计。
+QuickTerm is a lightweight terminal emulator built with **Tauri v2** + **React** + **TypeScript**. Designed for developers who pursue extreme simplicity and responsiveness, it strips away the redundancy of traditional terminals while retaining the core command-line experience with a modern UI.
 
-目前本项目已正式开源，欢迎各位开发者共同维护与优化！✨
-
----
-
-## ✨ 核心特性
-
-### 1. 📂 增强的目录导航 (Smart Navigation)
-- **智能路径探测 (Smart Path Detection)**：直接输入目录名即可实现快速跳转，无需手动输入 `cd`。
-- **cd 命令深度优化**：
-  - **波浪号自动展开**：支持 `cd ~` 及其子路径，自动解析为系统主目录。
-  - **快速回退 (Old PWD)**：支持 `cd -` 在最近两个工作目录间无缝切换。
-- **路径简写别名**：内置 `..` (一级回退), `...` (两级回退), `....` (三级回退) 等快捷指令。
-
-### 2. ⚡ 预置高效别名 (Power Aliases)
-内置了一系列生产力工具快捷键，减少重复敲击：
-- **文件管理**：`ll`, `la`, `l`, `ls` (自动着色)。
-- **Git 提效**：`gs` (status), `ga` (add), `gc` (commit), `gp` (push), `gl` (log)。
-- **系统工具**：`c`/`cls` (清屏), `md` (创建目录), `rd` (删除目录)。
-
-### 3. 🎨 现代化的提示符 (Modern UI)
-- **Oh My Zsh 视觉风格**：采用经典的青色、绿色、紫色配色方案。
-- **目录识别图标**：根据当前所在目录自动显示对应的 Emoji 图标（如 Desktop 显示 🖥️，src 显示 📂）。
-- **Git 状态实时感知**：自动检测当前目录是否为 Git 仓库，并实时显示当前分支名，如 `(main)`。
-- **极致路径模式**：仅显示当前目录名，告别冗长的全路径干扰。
-
-### 4. ⌨️ 极致交互体验
-- **命令历史记录**：支持使用键盘 `↑` `↓` 方向键浏览历史命令，并支持 `localStorage` 持久化存储。
-- **文本可选与复制**：终端输出支持鼠标选择、双击选词、三击选行，并可随时通过快捷键复制。
-- **全平台兼容**：后端由 Rust 驱动，完美支持 macOS, Linux 和 Windows 系统原生 Shell。
-- **自动聚焦与清屏**：支持 `Ctrl + L` 快速清屏，窗口激活时自动聚焦输入框。
+This project is now officially open-sourced. Contributions and optimizations from the community are more than welcome! ✨
 
 ---
 
-## 🛠 技术栈
+## ✨ Key Features
 
-| 模块 | 技术方案 |
+### 1. 📂 Smart Navigation
+- **Smart Path Detection**: Jump to a directory by simply typing its name—no `cd` required.
+- **Deeply Optimized `cd`**:
+  - **Tilde Expansion**: Supports `cd ~` and subpaths, automatically resolving to the system home directory.
+  - **Fast Backtrack (Old PWD)**: Supports `cd -` to switch seamlessly between the last two working directories.
+- **Path Aliases**: Built-in shortcuts like `..` (back 1 level), `...` (back 2 levels), `....` (back 3 levels).
+
+### 2. ⚡ Power Aliases
+Pre-configured aliases to boost your productivity:
+- **File Management**: `ll`, `la`, `l`, `ls` (with auto-color).
+- **Git Efficiency**: `gs` (status), `ga` (add), `gc` (commit), `gp` (push), `gl` (log).
+- **System Tools**: `c`/`cls` (clear screen), `md` (mkdir), `rd` (rmdir).
+
+### 3. 🎨 Modern UI
+- **Oh My Zsh Style**: Classic Cyan, Green, and Purple color scheme for better readability.
+- **Directory Icons**: Automatically displays relevant Emoji icons based on the current directory (e.g., 🖥️ for Desktop, 📂 for src).
+- **Real-time Git Status**: Detects Git repositories and displays the current branch name (e.g., `(main)`).
+- **Compact Path Mode**: Shows only the current directory name to avoid long path clutter.
+
+### 4. ⌨️ Seamless Interaction
+- **Command History**: Navigate through previous commands using `↑` `↓` arrow keys with `localStorage` persistence.
+- **Selectable Output**: Terminal output supports mouse selection, double-click for words, and triple-click for lines, with easy copy-paste.
+- **Cross-Platform**: Powered by Rust, supporting native shells on macOS, Linux, and Windows.
+- **Auto-Focus & Clear**: Quick clear with `Ctrl + L` and automatic input focus on window activation.
+
+---
+
+## 🛠 Tech Stack
+
+| Module | Solution |
 | :--- | :--- |
-| **核心框架** | [Tauri v2](https://v2.tauri.app/) (Rust) |
-| **前端 UI** | [React 18](https://react.dev/) + [Tailwind CSS](https://tailwindcss.com/) |
-| **类型安全** | [TypeScript](https://www.typescriptlang.org/) |
-| **构建工具** | [Vite](https://vitejs.dev/) |
-| **持久化** | LocalStorage |
+| **Core Framework** | [Tauri v2](https://v2.tauri.app/) (Rust) |
+| **Frontend UI** | [React 18](https://react.dev/) + [Tailwind CSS](https://tailwindcss.com/) |
+| **Type Safety** | [TypeScript](https://www.typescriptlang.org/) |
+| **Build Tool** | [Vite](https://vitejs.dev/) |
+| **Persistence** | LocalStorage |
 
 ---
 
-## 🚀 迭代路线图 (Roadmap)
+## 🚀 Roadmap
 
-### 🟢 第一阶段：基础体验完善 (已完成)
-- [x] **命令历史回溯**：支持使用 `↑` `↓` 方向键浏览历史命令。
-- [x] **文本选择支持**：实现终端输出可被选择与复制。
-- [x] **智能路径跳转**：无需 `cd` 直接输入文件夹名跳转。
-- [x] **启动路径优化**：默认从用户主目录 `~` 启动。
+### 🟢 Phase 1: Core Experience (Completed)
+- [x] **Command History**: Use `↑` `↓` to navigate through history.
+- [x] **Selectable Output**: Support for text selection and copying.
+- [x] **Smart Path Jump**: Jump to folders without typing `cd`.
+- [x] **Launch Path Optimization**: Default startup in user home directory `~`.
 
-### 🟡 第二阶段：个性化与深度定制 (进行中)
-- [ ] **基础自动补全**：实现针对文件名和文件夹名的 `Tab` 键补全。
-- [ ] **主题引擎**：支持自定义背景色、透明度及毛玻璃效果。
-- [ ] **多会话管理**：引入 Tab 页签系统，支持同时开启多个终端会话。
+### 🟡 Phase 2: Customization (In Progress)
+- [ ] **Basic Autocomplete**: Tab completion for file and folder names.
+- [ ] **Theme Engine**: Support for custom colors, transparency, and mica/blur effects.
+- [ ] **Multi-Session Management**: Tab system for multiple terminal sessions.
 
-### 🔴 第三阶段：高级功能与生态 (长期)
-- [ ] **配置文件系统**：支持通过 `.quicktermrc` 自定义用户别名和环境变量。
-- [ ] **远程会话 (SSH)**：内置基础的 SSH 连接管理功能。
+### 🔴 Phase 3: Advanced Features (Long-term)
+- [ ] **Config System**: Customize aliases and env variables via `.quicktermrc`.
+- [ ] **Remote Sessions (SSH)**: Built-in basic SSH connection management.
 
 ---
 
-## 📦 开发者指南
+## 📦 Developer Guide
 
-### 准备工作
-确保你的机器上已安装：
+### Prerequisites
+Ensure you have the following installed:
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable)
 - [Node.js](https://nodejs.org/) (v18+)
 
-### 启动开发模式
+### Development
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 启动开发服务器
+# Start dev server with HMR
 npm run tauri dev
 ```
 
-### 构建正式版本
+### Build
 ```bash
 npm run tauri build
 ```
 
 ---
 
-## 效果图
+## Screenshot
 <img width="1112" height="812" alt="QuickTerm UI" src="https://github.com/user-attachments/assets/18e7481a-9862-4b62-b127-6f1567d2c5e6" />
 
 ---
 
-## 📜 许可证
-本项目采用 [MIT License](./LICENSE) 开源。
+## 📜 License
+This project is licensed under the [MIT License](./LICENSE).
 
 ---
-**QuickTerm - 重新定义极简主义命令行工具。** ✨
+**QuickTerm - Redefining minimalism for the command line.** ✨
