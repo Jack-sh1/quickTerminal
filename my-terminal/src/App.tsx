@@ -422,14 +422,14 @@ function App() {
 
   return (
     <div className="h-screen bg-[#1e2a3a] text-gray-100 p-4 font-mono text-sm overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-auto mb-2 pr-2">
+      <div className="flex-1 overflow-auto mb-2 pr-2 select-text">
         {output.map((line: TerminalLine, i: number) => (
           <div key={i} className="mb-1">
             {line.type === 'command' && (
               <div className="flex items-center gap-2">
-                <span className="text-green-400 font-bold">{line.meta?.dir}</span>
+                <span className="text-green-400 font-bold select-none">{line.meta?.dir}</span>
                 {line.meta?.branch && (
-                  <span className="text-purple-400">({line.meta.branch})</span>
+                  <span className="text-purple-400 select-none">({line.meta.branch})</span>
                 )}
                 <span className="text-gray-100">{line.text}</span>
               </div>
@@ -446,11 +446,11 @@ function App() {
             )}
           </div>
         ))}
-        {isLoading && <div className="text-gray-500 animate-pulse">...</div>}
+        {isLoading && <div className="text-gray-500 animate-pulse select-none">...</div>}
         <div ref={bottomRef} />
       </div>
       
-      <div className="flex flex-col border-t border-gray-600 pt-3">
+      <div className="flex flex-col border-t border-gray-600 pt-3 select-none">
         <div className="flex items-center gap-2">
           <span className="text-green-400 font-bold">{getDisplayPath(currentDir)}</span>
           {gitBranch && (
